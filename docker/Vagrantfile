@@ -1,0 +1,51 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/xenial64"
+  config.vm.hostname = "docker"
+  config.vm.network "private_network", ip: "192.168.56.212"
+  #share folder vagrant
+  config.vm.synced_folder "src/", "/home/vagrant",
+  owner: "vagrant", group: "docker"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "512"
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    # Allow SSH Password Authentication
+    sed -i -e 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+    systemctl restart sshd.service
+    # Update
+    apt-get update -y
+    apt-get upgrade -y
+    apt-get dist-upgrade -y
+
+    #INSTALL DOCKER
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    #docker --version
+
+    #install docker compose
+    sudo apt  install docker-compose -y
+    #docker-compose --version
+
+    #install docker machine
+    base=https://github.com/docker/machine/releases/download/v0.16.0 &&
+    curl -L $base/docker-machine-$(uname -s)-$(uname -m) >/tmp/docker-machine &&
+    sudo install /tmp/docker-machine /usr/local/bin/docker-machine
+    #docker-machine --version
+
+    #sudo user docker
+    sudo groupadd docker
+    sudo usermod -aG docker $USER
+
+    #set access
+    #sudo chown "$USER":"$USER" /home/"$USER"/.docker -R
+    #sudo chmod g+rwx "$HOME/.docker" -R
+
+
+  SHELL
+
+end
